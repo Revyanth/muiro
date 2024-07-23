@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
+import yt_dlp
+from streamlit_player import st_player
+import json
 
 # Set Streamlit theme and layout
 st.set_page_config(
@@ -37,9 +40,34 @@ st.title("🎵 Music Recommendation System")
 
 # Sidebar with user input
 st.sidebar.header("User Input")
-song_name = st.sidebar.text_input("Enter a song name:", "Shape of You")
+
+# Create a dropdown bar for track names
+track_names = data['track_name'].unique()
+selected_song = st.sidebar.selectbox(
+    "Choose a song from the list:",
+    track_names,
+    index=0,
+    key="song_select"
+)
+
 num_recommendations = st.sidebar.slider("Number of Recommendations", min_value=1, max_value=20, value=10)
 
+# Function to get the first YouTube video URL based on search query
+def get_first_youtube_result(query):
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'noplaylist': True,
+        'quiet': True,
+        'default_search': 'ytsearch',
+        'max_downloads': 1
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        result = ydl.extract_info(query, download=False)
+        if 'entries' in result:
+            video = result['entries'][0]
+        else:
+            video = result
+        return f"https://www.youtube.com/watch?v={video['id']}"
 
 # Recommendation function by song name
 def recommend_tracks_by_name(song_name, num_recommendations):
@@ -62,12 +90,34 @@ def recommend_tracks_by_name(song_name, num_recommendations):
     return data.iloc[recommended_track_indices][['artist_name', 'track_name']]
 
 
-# Display recommendations
-if st.sidebar.button("Recommend"):
-    recommendations = recommend_tracks_by_name(song_name, num_recommendations)
+if st.sidebar.button("play"):
+    recommendations = recommend_tracks_by_name(selected_song, num_recommendations)
     if recommendations is not None:
-        st.header("🎶 Recommended Tracks")
-        st.table(recommendations)
+        
+
+ # Ensure selected_song is a dictionary
+        selected_song_info = data[data['track_name'] == selected_song].iloc[0]
+        search_query = f"{selected_song_info['track_name']} {selected_song_info['artist_name']}"
+        youtube_url = get_first_youtube_result(search_query)
+        st.subheader(f"Playing: {selected_song_info['track_name']} by {selected_song_info['artist_name']}")
+        st_player(youtube_url)
+
+# Display recommendations and play the selected song's audio
+if st.sidebar.button("Recommend"):
+    recommendations = recommend_tracks_by_name(selected_song, num_recommendations)
+    if recommendations is not None:
+        st.sidebar.header("Recommended Tracks")
+        st.sidebar.table(recommendations)
+
+        # Ensure selected_song is a dictionary
+        # if st.sidebar.button("play"):
+        #     selected_song_info = data[data['track_name'] == selected_song].iloc[0]
+        #     search_query = f"{selected_song_info['track_name']} {selected_song_info['artist_name']}"
+        #     youtube_url = get_first_youtube_result(search_query)
+        #     st.subheader(f"Playing: {selected_song_info['track_name']} by {selected_song_info['artist_name']}")
+        #     st_player(youtube_url)
+
+
 
 # Custom CSS for colorful and creative interface
 st.markdown(
@@ -77,7 +127,7 @@ st.markdown(
         background-color: #F7CAC9;
     }
     .st-bc {
-        background-color: #FF6B6B;
+        background-color: #000000;
         padding: 1rem;
         border-radius: 0.5rem;
     }
@@ -86,13 +136,13 @@ st.markdown(
         color: #FFFFFF;
         font-size: 24px;
         padding: 10px;
-        border-radius: 0.5rem;
+        border-radius: rem;
         text-align: center;
     }
     .st-bs {
-        background-color: #FFD700;
+        background-color: #000000;
         padding: 1rem;
-        border-radius: 0.5rem;
+        border-radius: 1rem;
     }
     .st-ek {
         background-color: #6495ED;
